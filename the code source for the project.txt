@@ -1,0 +1,151 @@
+the code source :
+#include <iostream>
+#include <string>
+using namespace std;
+
+const int MAX_TRANSACTIONS = 200;
+
+class Transaction {
+public:
+    string description;
+    double amount;
+
+    Transaction() {}
+    Transaction(string desc, double amt) : description(desc), amount(amt) {}
+
+    virtual void display() const {
+        cout << "Description: " << description << ", Amount: $" << amount << endl;
+    }
+
+    Transaction operator+(const Transaction& other) const {
+        return Transaction(description + " & " + other.description, amount + other.amount);
+    }
+
+    friend string compareAmount(const Transaction& t1, const Transaction& t2) {
+        if (t1.amount > t2.amount)
+            return t1.description + " has a higher amount.";
+        else if (t1.amount < t2.amount)
+            return t2.description + " has a higher amount.";
+        else
+            return "Both transactions have the same amount.";
+    }
+};
+
+class Income : public Transaction {
+public:
+    Income() {}
+    Income(string source, double amount) : Transaction(source, amount) {}
+
+    void display() const override {
+        cout << "Income Source: " << description << ", Amount: $" << amount << endl;
+    }
+};
+
+class Expense : public Transaction {
+public:
+    Expense() {}
+    Expense(string category, double amount) : Transaction(category, amount) {}
+
+    void display() const override {
+        cout << "Expense Category: " << description << ", Amount: $" << amount << endl;
+    }
+};
+
+template<typename T>
+class BudgetManager {
+private:
+    double totalIncome;
+    double totalExpenses;
+    Transaction* transactions[MAX_TRANSACTIONS];
+    int transactionCount;
+
+public:
+    BudgetManager() : totalIncome(0), totalExpenses(0), transactionCount(0) {}
+
+    void addTransaction(Transaction* transaction) {
+        if (transactionCount < MAX_TRANSACTIONS) {
+            transactions[transactionCount++] = transaction;
+            if (dynamic_cast<Income*>(transaction)) {
+                totalIncome += transaction->amount;
+            } else if (dynamic_cast<Expense*>(transaction)) {
+                totalExpenses += transaction->amount;
+            }
+        } else {
+            cout << "Maximum transaction limit reached." << endl;
+        }
+    }
+
+    void addIncome() {
+        string source;
+        double amount;
+        cout << "Enter source of income: ";
+        cin.ignore();
+        getline(cin, source);
+        cout << "Enter amount: $";
+        cin >> amount;
+        addTransaction(new Income(source, amount));
+    }
+
+    void addExpense() {
+        string category;
+        double amount;
+        cout << "Enter category of expense: ";
+        cin.ignore();
+        getline(cin, category);
+        cout << "Enter amount: $";
+        cin >> amount;
+        addTransaction(new Expense(category, amount));
+    }
+
+    void displaySummary() const {
+        cout << "Total Income: $" << totalIncome << endl;
+        cout << "Total Expenses: $" << totalExpenses << endl;
+        cout << "Net Income: $" << totalIncome - totalExpenses << endl;
+
+        cout << "\nTransaction Details:" << endl;
+        for (int i = 0; i < transactionCount; ++i) {
+            transactions[i]->display();
+        }
+    }
+
+    int getTransactionCount() const {
+        return transactionCount;
+    }
+
+    const Transaction* getTransaction(int index) const {
+        if (index >= 0 && index < transactionCount) {
+            return transactions[index];
+        }
+        return nullptr;
+    }
+};
+
+int main() {
+    BudgetManager<Transaction> manager;
+    char choice;
+    do {
+        cout << "Enter 'i' to add income, 'e' to add expense, 'q' to quit, or 'd' to display summary: ";
+        cin >> choice;
+        switch (choice) {
+            case 'i':
+                manager.addIncome();
+                break;
+            case 'e':
+                manager.addExpense();
+                break;
+            case 'd':
+                manager.displaySummary();
+                break;
+            case 'q':
+                break;
+            default:
+                cout << "Invalid choice. Please try again." << endl;
+        }
+    } while (choice != 'q');
+
+    if (manager.getTransactionCount() > 1) {
+        cout << compareAmount(*manager.getTransaction(0), *manager.getTransaction(1)) << endl;
+    }
+
+    return 0;
+}
